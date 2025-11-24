@@ -27,6 +27,7 @@ public:
     void setName(const std::string& name);
     void setGroup(const std::string& group);
     void setAvgScore(double score);
+    void setAdmissionDate(std::chrono::system_clock::time_point date) { admissionDate = date; }
     
     // VALID
     bool isValid() const;

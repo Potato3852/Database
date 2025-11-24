@@ -7,17 +7,17 @@ CONFIG += c++17
 
 SOURCES += \
     main.cpp \
-    MainWindow.cpp \
-    Database.cpp \
-    DatabaseController.cpp \
-    FileManager.cpp \
-    Student.cpp \
-    AddStudentDialog.cpp
+    gui/MainWindow.cpp \
+    core/Database.cpp \
+    controllers/DatabaseController.cpp \
+    core/FileManager.cpp \
+    core/Student.cpp \
+    gui/AddStudentDialog.cpp
 
 HEADERS += \
-    MainWindow.h \
-    Database.h \
-    DatabaseController.h \
-    FileManager.h \
-    Student.h \
-    AddStudentDialog.h
+    gui/MainWindow.h \
+    core/Database.h \
+    controllers/DatabaseController.h \
+    core/FileManager.h \
+    core/Student.h \
+    gui/AddStudentDialog.h

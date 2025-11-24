@@ -38,6 +38,8 @@ AddStudentDialog::AddStudentDialog(QWidget* parent)
     connect(cancelButton, &QPushButton::clicked, this, &QDialog::reject);
 }
 
+// getters...
+
 int AddStudentDialog::getId() const {
     return idEdit->text().toInt();
 }
@@ -52,4 +54,22 @@ QString AddStudentDialog::getGroup() const {
 
 double AddStudentDialog::getScore() const {
     return scoreEdit->value();
+}
+
+// setters...
+
+void AddStudentDialog::setId(int id) {
+    idEdit->setText(QString::number(id));
+}
+
+void AddStudentDialog::setName(const QString& name) {
+    nameEdit->setText(name);
+}
+
+void AddStudentDialog::setGroup(const QString& group) {
+    groupEdit->setText(group);
+}
+
+void AddStudentDialog::setScore(double score) {
+    scoreEdit->setValue(score);
 }

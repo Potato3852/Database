@@ -44,7 +44,17 @@ bool Database::updateStudent(int id, const Student& updatedData) {
         return false;
     }
 
+    if (id != updatedData.getId() && !isIdUnique(updatedData.getId())) {
+        return false;
+    }
+
     *student = updatedData;
+
+    if (id != updatedData.getId()) {
+        idIndex.erase(id);
+        idIndex[updatedData.getId()] = idIndex[id];
+    }
+
     return true;
 }
 

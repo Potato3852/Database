@@ -53,19 +53,22 @@ OBJECTS_DIR   = ./
 ####### Files
 
 SOURCES       = main.cpp \
-		MainWindow.cpp \
-		Database.cpp \
-		DatabaseController.cpp \
-		FileManager.cpp \
-		Student.cpp \
-		AddStudentDialog.cpp 
+		gui/MainWindow.cpp \
+		core/Database.cpp \
+		controllers/DatabaseController.cpp \
+		core/FileManager.cpp \
+		core/Student.cpp \
+		gui/AddStudentDialog.cpp moc_MainWindow.cpp \
+		moc_AddStudentDialog.cpp
 OBJECTS       = main.o \
 		MainWindow.o \
 		Database.o \
 		DatabaseController.o \
 		FileManager.o \
 		Student.o \
-		AddStudentDialog.o
+		AddStudentDialog.o \
+		moc_MainWindow.o \
+		moc_AddStudentDialog.o
 DIST          = /usr/lib/qt/mkspecs/features/spec_pre.prf \
 		/usr/lib/qt/mkspecs/common/unix.conf \
 		/usr/lib/qt/mkspecs/common/linux.conf \
@@ -227,18 +230,18 @@ DIST          = /usr/lib/qt/mkspecs/features/spec_pre.prf \
 		/usr/lib/qt/mkspecs/features/exceptions.prf \
 		/usr/lib/qt/mkspecs/features/yacc.prf \
 		/usr/lib/qt/mkspecs/features/lex.prf \
-		student_database.pro MainWindow.h \
-		Database.h \
-		DatabaseController.h \
-		FileManager.h \
-		Student.h \
-		AddStudentDialog.h main.cpp \
-		MainWindow.cpp \
-		Database.cpp \
-		DatabaseController.cpp \
-		FileManager.cpp \
-		Student.cpp \
-		AddStudentDialog.cpp
+		student_database.pro gui/MainWindow.h \
+		core/Database.h \
+		controllers/DatabaseController.h \
+		core/FileManager.h \
+		core/Student.h \
+		gui/AddStudentDialog.h main.cpp \
+		gui/MainWindow.cpp \
+		core/Database.cpp \
+		controllers/DatabaseController.cpp \
+		core/FileManager.cpp \
+		core/Student.cpp \
+		gui/AddStudentDialog.cpp
 QMAKE_TARGET  = student_database
 DESTDIR       = 
 TARGET        = student_database
@@ -590,8 +593,8 @@ distdir: FORCE
 	@test -d $(DISTDIR) || mkdir -p $(DISTDIR)
 	$(COPY_FILE) --parents $(DIST) $(DISTDIR)/
 	$(COPY_FILE) --parents /usr/lib/qt/mkspecs/features/data/dummy.cpp $(DISTDIR)/
-	$(COPY_FILE) --parents MainWindow.h Database.h DatabaseController.h FileManager.h Student.h AddStudentDialog.h $(DISTDIR)/
-	$(COPY_FILE) --parents main.cpp MainWindow.cpp Database.cpp DatabaseController.cpp FileManager.cpp Student.cpp AddStudentDialog.cpp $(DISTDIR)/
+	$(COPY_FILE) --parents gui/MainWindow.h core/Database.h controllers/DatabaseController.h core/FileManager.h core/Student.h gui/AddStudentDialog.h $(DISTDIR)/
+	$(COPY_FILE) --parents main.cpp gui/MainWindow.cpp core/Database.cpp controllers/DatabaseController.cpp core/FileManager.cpp core/Student.cpp gui/AddStudentDialog.cpp $(DISTDIR)/
 
 
 clean: compiler_clean 
@@ -623,8 +626,23 @@ compiler_moc_predefs_clean:
 moc_predefs.h: /usr/lib/qt/mkspecs/features/data/dummy.cpp
 	g++ -pipe -O2 -std=gnu++1z -flto -fno-fat-lto-objects -Wall -Wextra -dM -E -o moc_predefs.h /usr/lib/qt/mkspecs/features/data/dummy.cpp
 
-compiler_moc_header_make_all:
+compiler_moc_header_make_all: moc_MainWindow.cpp moc_AddStudentDialog.cpp
 compiler_moc_header_clean:
+	-$(DEL_FILE) moc_MainWindow.cpp moc_AddStudentDialog.cpp
+moc_MainWindow.cpp: gui/MainWindow.h \
+		controllers/DatabaseController.h \
+		core/Database.h \
+		core/Student.h \
+		core/FileManager.h \
+		moc_predefs.h \
+		/usr/bin/moc
+	/usr/bin/moc $(DEFINES) --include /home/nikita/Database/moc_predefs.h -I/usr/lib/qt/mkspecs/linux-g++ -I/home/nikita/Database -I/usr/include/qt -I/usr/include/qt/QtWidgets -I/usr/include/qt/QtGui -I/usr/include/qt/QtCore -I/usr/include/c++/15.2.1 -I/usr/include/c++/15.2.1/x86_64-pc-linux-gnu -I/usr/include/c++/15.2.1/backward -I/usr/lib/gcc/x86_64-pc-linux-gnu/15.2.1/include -I/usr/local/include -I/usr/lib/gcc/x86_64-pc-linux-gnu/15.2.1/include-fixed -I/usr/include gui/MainWindow.h -o moc_MainWindow.cpp
+
+moc_AddStudentDialog.cpp: gui/AddStudentDialog.h \
+		moc_predefs.h \
+		/usr/bin/moc
+	/usr/bin/moc $(DEFINES) --include /home/nikita/Database/moc_predefs.h -I/usr/lib/qt/mkspecs/linux-g++ -I/home/nikita/Database -I/usr/include/qt -I/usr/include/qt/QtWidgets -I/usr/include/qt/QtGui -I/usr/include/qt/QtCore -I/usr/include/c++/15.2.1 -I/usr/include/c++/15.2.1/x86_64-pc-linux-gnu -I/usr/include/c++/15.2.1/backward -I/usr/lib/gcc/x86_64-pc-linux-gnu/15.2.1/include -I/usr/local/include -I/usr/lib/gcc/x86_64-pc-linux-gnu/15.2.1/include-fixed -I/usr/include gui/AddStudentDialog.h -o moc_AddStudentDialog.cpp
+
 compiler_moc_objc_header_make_all:
 compiler_moc_objc_header_clean:
 compiler_moc_source_make_all:
@@ -637,30 +655,51 @@ compiler_yacc_impl_make_all:
 compiler_yacc_impl_clean:
 compiler_lex_make_all:
 compiler_lex_clean:
-compiler_clean: compiler_moc_predefs_clean 
+compiler_clean: compiler_moc_predefs_clean compiler_moc_header_clean 
 
 ####### Compile
 
-main.o: main.cpp 
+main.o: main.cpp gui/MainWindow.h \
+		controllers/DatabaseController.h \
+		core/Database.h \
+		core/Student.h \
+		core/FileManager.h
 	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o main.o main.cpp
 
-MainWindow.o: MainWindow.cpp 
-	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o MainWindow.o MainWindow.cpp
+MainWindow.o: gui/MainWindow.cpp gui/MainWindow.h \
+		controllers/DatabaseController.h \
+		core/Database.h \
+		core/Student.h \
+		core/FileManager.h \
+		gui/AddStudentDialog.h
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o MainWindow.o gui/MainWindow.cpp
 
-Database.o: Database.cpp 
-	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o Database.o Database.cpp
+Database.o: core/Database.cpp core/Database.h \
+		core/Student.h
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o Database.o core/Database.cpp
 
-DatabaseController.o: DatabaseController.cpp 
-	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o DatabaseController.o DatabaseController.cpp
+DatabaseController.o: controllers/DatabaseController.cpp controllers/DatabaseController.h \
+		core/Database.h \
+		core/Student.h \
+		core/FileManager.h
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o DatabaseController.o controllers/DatabaseController.cpp
 
-FileManager.o: FileManager.cpp 
-	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o FileManager.o FileManager.cpp
+FileManager.o: core/FileManager.cpp core/FileManager.h \
+		core/Database.h \
+		core/Student.h
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o FileManager.o core/FileManager.cpp
 
-Student.o: Student.cpp 
-	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o Student.o Student.cpp
+Student.o: core/Student.cpp core/Student.h
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o Student.o core/Student.cpp
 
-AddStudentDialog.o: AddStudentDialog.cpp 
-	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o AddStudentDialog.o AddStudentDialog.cpp
+AddStudentDialog.o: gui/AddStudentDialog.cpp gui/AddStudentDialog.h
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o AddStudentDialog.o gui/AddStudentDialog.cpp
+
+moc_MainWindow.o: moc_MainWindow.cpp 
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o moc_MainWindow.o moc_MainWindow.cpp
+
+moc_AddStudentDialog.o: moc_AddStudentDialog.cpp 
+	$(CXX) -c $(CXXFLAGS) $(INCPATH) -o moc_AddStudentDialog.o moc_AddStudentDialog.cpp
 
 ####### Install
 

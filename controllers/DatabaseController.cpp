@@ -59,6 +59,18 @@ bool DatabaseController::createBackup(const std::string& backupDir) {
     return FileManager::createBackup(*database, backupDir);
 }
 
+bool DatabaseController::restoreFromBackup(const std::string& backupFile) {
+    return FileManager::restoreFromBackup(*database, backupFile);
+}
+
 bool DatabaseController::exportToCSV(const std::string& filename) {
     return FileManager::exportToCSV(*database, filename);
+}
+
+bool DatabaseController::importFromCSV(const std::string& filename) {
+    return FileManager::importFromCSV(*database, filename);
+}
+
+bool DatabaseController::updateStudent(int id, const Student& updatedData) {
+    return database->updateStudent(id, updatedData);
 }

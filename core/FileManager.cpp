@@ -1,6 +1,7 @@
 #include "FileManager.h"
 #include <fstream>
 #include <filesystem>
+#include <sstream>
 
 bool FileManager::saveToFile(const Database& db, const std::string& filename) {
     std::ofstream file(filename, std::ios::binary);
@@ -52,7 +53,7 @@ bool FileManager::loadFromFile(Database& db, const std::string& filename) {
         file.read(reinterpret_cast<char*>(&score), sizeof(score));
         file.read(reinterpret_cast<char*>(&time), sizeof(time));
         
-        auto date = std::chrono::system_clock::from_time_t(time);
+        std::chrono::system_clock::from_time_t(time);
         Student student(id, std::string(name), std::string(group), score);
         
         db.addStudent(student);
@@ -81,11 +82,58 @@ bool FileManager::exportToCSV(const Database& db, const std::string& filename) {
     return file.good();
 }
 
+bool FileManager::importFromCSV(Database& db, const std::string& filename) {
+    std::ifstream file(filename);
+    if (!file.is_open()) {
+        return false;
+    }
+    
+    std::string line;
+    bool firstLine = true;
+    int importedCount = 0;
+    
+    while(std::getline(file, line)) {
+        if(firstLine) {
+            firstLine = false;
+            continue;
+        }
+        
+        std::stringstream ss(line);
+        std::string token;
+        std::vector<std::string> tokens;
+
+        while(std::getline(ss, token, ',')) {
+            tokens.push_back(token);
+        }
+        
+        if(tokens.size() >= 4) {
+            try {
+               int id = std::stoi(tokens[0]);
+                std::string name = tokens[1];
+                std::string group = tokens[2];
+                double score = std::stod(tokens[3]);
+
+                Student student(id, name, group, score);
+                
+                if (db.addStudent(student)) {
+                    importedCount++;
+                }
+            } catch (const std::exception& e) {
+                // skiping...
+                continue;
+            }
+        }
+    }
+    
+    return importedCount > 0;
+}
+
 bool FileManager::createBackup(const Database& db, const std::string& backupDir) {
     auto now = std::chrono::system_clock::now();
     auto time = std::chrono::system_clock::to_time_t(now);
     
     std::string backupFile = backupDir + "/backup_" + std::to_string(time) + ".dat";
+
     return saveToFile(db, backupFile);
 }
 

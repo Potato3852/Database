@@ -18,6 +18,11 @@ public:
     QString getGroup() const;
     double getScore() const;
 
+    void setId(int id);
+    void setName(const QString& name);
+    void setGroup(const QString& group);
+    void setScore(double score);
+
 private:
     QLineEdit* idEdit;
     QLineEdit* nameEdit;
