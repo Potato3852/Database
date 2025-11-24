@@ -74,3 +74,7 @@ bool DatabaseController::importFromCSV(const std::string& filename) {
 bool DatabaseController::updateStudent(int id, const Student& updatedData) {
     return database->updateStudent(id, updatedData);
 }
+
+Statistics DatabaseController::getStatistics() const {
+    return database->getStatistics();
+}

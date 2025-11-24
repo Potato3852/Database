@@ -33,12 +33,14 @@ private slots:
     void onFileExit();
     void onBackupCreate();
     void onBackupRestore();
+    void showStatistics();
     void onEditStudent(int row, int column);
 
 private:
     void setupUI();
     void createMenus();
     void createFileMenu();
+    void createStatisticMenu();
     void setupTableSignals();
     
     DatabaseController controller;

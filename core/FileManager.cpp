@@ -12,7 +12,9 @@ bool FileManager::saveToFile(const Database& db, const std::string& filename) {
     size_t count = db.getStudentCount();
     file.write(reinterpret_cast<const char*>(&count), sizeof(count));
 
-    for(const auto& student : db.getAllStudents()) {
+    for(const auto& pair : db.getAllStudents()) {
+        const Student& student = pair.second;
+
         int id = student.getId();
         file.write(reinterpret_cast<const char*>(&id), sizeof(id));
         
@@ -70,7 +72,9 @@ bool FileManager::exportToCSV(const Database& db, const std::string& filename) {
 
     file << "ID,Name,Group,Score,AdmissionDate\n";
 
-    for(const auto& student : db.getAllStudents()) {
+    for(const auto& pair : db.getAllStudents()) {
+        const Student& student = pair.second;
+        
         auto time = std::chrono::system_clock::to_time_t(student.getAdmissionDate());
         file << student.getId() << ","
             << student.getName() << ","

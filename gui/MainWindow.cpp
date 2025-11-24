@@ -87,7 +87,9 @@ void MainWindow::refreshTable() {
     if (!db) return;
     
     int row = 0;
-    for (const auto& student : db->getAllStudents()) {
+    for (const auto& pair : db->getAllStudents()) {
+        const Student& student = pair.second;
+        
         table->insertRow(row);
         table->setItem(row, 0, new QTableWidgetItem(QString::number(student.getId())));
         table->setItem(row, 1, new QTableWidgetItem(QString::fromStdString(student.getName())));
@@ -177,6 +179,14 @@ void MainWindow::onClearSearch() {
 
 void MainWindow::createMenus() {
     createFileMenu();
+    createStatisticMenu();
+}
+
+void MainWindow::createStatisticMenu() {
+    QMenu* statsMenu = menuBar()->addMenu("Статистика");
+    QAction* showStatsAction = new QAction("Показать статистику", this);
+    statsMenu->addAction(showStatsAction);
+    connect(showStatsAction, &QAction::triggered, this, &MainWindow::showStatistics);
 }
 
 void MainWindow::createFileMenu() {
@@ -368,4 +378,22 @@ void MainWindow::onBackupRestore() {
             }
         }
     }
+}
+
+void MainWindow::showStatistics() {
+    auto stats = controller.getStatistics();
+    
+    QString message = QString("СТАТИСТИКА БАЗЫ ДАННЫХ\n\n");
+    message += QString("Всего студентов: %1\n").arg(stats.totalStudents);
+    message += QString("Общий средний балл: %1\n\n").arg(stats.overallAvgScore, 0, 'f', 2);
+    
+    message += "По группам:\n";
+    for (const auto& [group, avgScore] : stats.avgScoreByGroup) {
+        message += QString("  %1: %2 (студентов: %3)\n")
+            .arg(QString::fromStdString(group))
+            .arg(avgScore, 0, 'f', 2)
+            .arg(stats.countByGroup.at(group));
+    }
+    
+    QMessageBox::information(this, "Статистика", message);
 }

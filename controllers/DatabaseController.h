@@ -24,6 +24,7 @@ public:
     bool updateStudent(int id, const Student& updatedData);
     Student* findStudent(int id);
     std::vector<Student*> searchStudents(const std::string& field, const std::string& value);
+    Statistics getStatistics() const;
     
     // Backup and export
     bool createBackup(const std::string& backupDir);
