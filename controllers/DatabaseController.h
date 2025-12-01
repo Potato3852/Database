@@ -24,6 +24,7 @@ public:
     bool updateStudent(int id, const Student& updatedData);
     Student* findStudent(int id);
     std::vector<Student*> searchStudents(const std::string& field, const std::string& value);
+    std::vector<Student*> searchStudentsByPrefix(const std::string& prefix);
     Statistics getStatistics() const;
     
     // Backup and export
@@ -35,4 +36,9 @@ public:
     // Get for GUI
     const Database* getDatabase() const { return database.get(); }
     bool isDatabaseOpen() const { return database != nullptr; }
+
+    // Sort
+    std::vector<const Student*> getSortedStudents(Database::SortField field = Database::SortField::ID, Database::SortOrder order = Database::SortOrder::ASC) const {
+        return database->getSortedStudents(field, order);
+    }
 };

@@ -144,3 +144,57 @@ bool FileManager::createBackup(const Database& db, const std::string& backupDir)
 bool FileManager::restoreFromBackup(Database& db, const std::string& backupFile) {
     return loadFromFile(db, backupFile);
 }
+
+std::vector<const Student*> Database::getSortedStudents(SortField field, SortOrder order) const {
+    std::vector<const Student*> result;
+    result.reserve(students.size());
+    
+    for (const auto& pair : students) {
+        result.push_back(&pair.second);
+    }
+    
+    switch (field) {
+        case SortField::ID:
+            std::sort(result.begin(), result.end(),
+                [](const Student* a, const Student* b) {
+                    return a->getId() < b->getId();
+                });
+            break;
+            
+        case SortField::NAME:
+            std::sort(result.begin(), result.end(),
+                [](const Student* a, const Student* b) {
+                    std::string nameA = a->getName();
+                    std::string nameB = b->getName();
+                    std::transform(nameA.begin(), nameA.end(), nameA.begin(), ::tolower);
+                    std::transform(nameB.begin(), nameB.end(), nameB.begin(), ::tolower);
+                    return nameA < nameB;
+                });
+            break;
+            
+        case SortField::GROUP:
+            std::sort(result.begin(), result.end(),
+                [](const Student* a, const Student* b) {
+                    std::string groupA = a->getGroup();
+                    std::string groupB = b->getGroup();
+                    std::transform(groupA.begin(), groupA.end(), groupA.begin(), ::tolower);
+                    std::transform(groupB.begin(), groupB.end(), groupB.begin(), ::tolower);
+                    return groupA < groupB;
+                });
+            break;
+            
+        case SortField::SCORE:
+            std::sort(result.begin(), result.end(), [](const Student* a, const Student* b) {return a->getAvgScore() < b->getAvgScore(); });
+            break;
+            
+        case SortField::DATE:
+            std::sort(result.begin(), result.end(),[](const Student* a, const Student* b) { return a->getAdmissionDate() < b->getAdmissionDate(); });
+            break;
+    }
+    
+    if(order == SortOrder::DESC) {
+        std::reverse(result.begin(), result.end());
+    }
+    
+    return result;
+}

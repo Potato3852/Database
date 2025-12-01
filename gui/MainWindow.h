@@ -35,13 +35,21 @@ private slots:
     void onBackupRestore();
     void showStatistics();
     void onEditStudent(int row, int column);
+    void toggleTheme();
+    void onSortTable();
 
 private:
     void setupUI();
     void createMenus();
     void createFileMenu();
     void createStatisticMenu();
+    void createTheme();
     void setupTableSignals();
+    void setupSortingUI();
+
+    void applyDarkTheme();
+    void applyLightTheme();
+    bool isDarkTheme;
     
     DatabaseController controller;
     QTableWidget* table;
@@ -60,4 +68,7 @@ private:
     QAction* backupAction;
     QAction* restoreAction;
     QAction* exitAction;
+    QComboBox* sortFieldCombo;
+    QComboBox* sortOrderCombo;
+    QPushButton* sortButton;
 };

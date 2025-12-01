@@ -9,10 +9,11 @@
 #include <QComboBox>
 #include <QFileDialog>
 #include <QMessageBox>
+#include <QApplication>
 
-MainWindow::MainWindow(QWidget* parent) 
-    : QMainWindow(parent) {
+MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent), isDarkTheme(false) {
     setupUI();
+    setupSortingUI();
     createMenus();
     refreshTable();
     statusBar()->showMessage("Готово");
@@ -38,6 +39,7 @@ void MainWindow::setupUI() {
 
     // Search
     searchFieldCombo = new QComboBox(this);
+    searchFieldCombo->addItem("ID");
     searchFieldCombo->addItem("Имя");
     searchFieldCombo->addItem("Группа");
     
@@ -72,35 +74,23 @@ void MainWindow::setupUI() {
     connect(searchButton, &QPushButton::clicked, this, &MainWindow::onSearchStudent);
     connect(clearButton, &QPushButton::clicked, this, &MainWindow::onClearSearch);
     connect(searchEdit, &QLineEdit::returnPressed, this, &MainWindow::onSearchStudent);
+    connect(searchFieldCombo, QOverload<int>::of(&QComboBox::currentIndexChanged),
+        this, [this](int index) {
+    QString field = searchFieldCombo->itemText(index);
+    if (field == "ID") {
+        searchEdit->setPlaceholderText("Введите число...");
+        searchEdit->setValidator(new QIntValidator(1, 99999, this));
+    } else {
+        searchEdit->setPlaceholderText("Введите текст для поиска...");
+        searchEdit->setValidator(nullptr);
+    }
+    });
 
     setupTableSignals();
 }
 
 void MainWindow::refreshTable() {
-    table->setRowCount(0);
-    
-    if (!controller.isDatabaseOpen()) {
-        controller.createNewDatabase();
-    }
-    
-    const Database* db = controller.getDatabase();
-    if (!db) return;
-    
-    int row = 0;
-    for (const auto& pair : db->getAllStudents()) {
-        const Student& student = pair.second;
-        
-        table->insertRow(row);
-        table->setItem(row, 0, new QTableWidgetItem(QString::number(student.getId())));
-        table->setItem(row, 1, new QTableWidgetItem(QString::fromStdString(student.getName())));
-        table->setItem(row, 2, new QTableWidgetItem(QString::fromStdString(student.getGroup())));
-        table->setItem(row, 3, new QTableWidgetItem(QString::number(student.getAvgScore())));
-        
-        auto time = std::chrono::system_clock::to_time_t(student.getAdmissionDate());
-        table->setItem(row, 4, new QTableWidgetItem(QString::fromStdString(std::ctime(&time))));
-        
-        row++;
-    }
+    onSortTable();
 }
 
 void MainWindow::onAddStudent() {
@@ -145,18 +135,27 @@ void MainWindow::onSearchStudent() {
     }
     
     QString field = searchFieldCombo->currentText();
-    std::string searchValue = searchText.toStdString();
     
     std::vector<Student*> results;
-    if(field == "Имя") {
-        results = controller.searchStudents("name", searchValue);
+    
+    if(field == "ID") {
+        bool ok;
+        int id = searchText.toInt(&ok);
+        if (ok) {
+            Student* student = controller.findStudent(id);
+            if (student) {
+                results.push_back(student);
+            }
+        }
+    } else if(field == "Имя") {
+        results = controller.searchStudents("name", searchText.toStdString());
     } else if(field == "Группа") {
-        results = controller.searchStudents("group", searchValue);
+        results = controller.searchStudents("group", searchText.toStdString());
     }
 
     table->setRowCount(0);
-    int row = 0;
     for(auto* student : results) {
+        int row = table->rowCount();
         table->insertRow(row);
         table->setItem(row, 0, new QTableWidgetItem(QString::number(student->getId())));
         table->setItem(row, 1, new QTableWidgetItem(QString::fromStdString(student->getName())));
@@ -165,10 +164,9 @@ void MainWindow::onSearchStudent() {
         
         auto time = std::chrono::system_clock::to_time_t(student->getAdmissionDate());
         table->setItem(row, 4, new QTableWidgetItem(QString::fromStdString(std::ctime(&time))));
-        row++;
     }
 
-    statusBar()->showMessage(QString("Найдено студентов: %1").arg(results.size()));
+    statusBar()->showMessage(QString("Найдено: %1").arg(results.size()));
 }
 
 void MainWindow::onClearSearch() {
@@ -177,16 +175,40 @@ void MainWindow::onClearSearch() {
     statusBar()->showMessage("Поиск очищен");
 }
 
-void MainWindow::createMenus() {
-    createFileMenu();
-    createStatisticMenu();
-}
-
 void MainWindow::createStatisticMenu() {
     QMenu* statsMenu = menuBar()->addMenu("Статистика");
     QAction* showStatsAction = new QAction("Показать статистику", this);
     statsMenu->addAction(showStatsAction);
     connect(showStatsAction, &QAction::triggered, this, &MainWindow::showStatistics);
+}
+
+// Theme -------------------------
+void MainWindow::createTheme() {
+    QMenu* themeMenu = menuBar()->addMenu("Тема");
+    QAction* toggleThemeAction = new QAction("Переключить тему", this);
+    themeMenu->addAction(toggleThemeAction);
+    connect(toggleThemeAction, &QAction::triggered, this, &MainWindow::toggleTheme);
+}
+
+void MainWindow::toggleTheme() {
+    isDarkTheme = !isDarkTheme;
+    
+    if(isDarkTheme) {
+        applyDarkTheme();
+        setWindowTitle("Student Database 🌙");
+        statusBar()->showMessage("Тёмная тема включена");
+    } else {
+        applyLightTheme();
+        setWindowTitle("Student Database ☀️");
+        statusBar()->showMessage("Светлая тема включена");
+    }
+}
+//--------------------------------
+
+void MainWindow::createMenus() {
+    createFileMenu();
+    createStatisticMenu();
+    createTheme();
 }
 
 void MainWindow::createFileMenu() {
@@ -299,8 +321,8 @@ void MainWindow::onFileImportCSV() {
     QString filename = QFileDialog::getOpenFileName(this, "Импорт из CSV", 
         "", "CSV Files (*.csv);;All Files (*)");
     
-    if (!filename.isEmpty()) {
-        if (controller.importFromCSV(filename.toStdString())) {
+    if(!filename.isEmpty()) {
+        if(controller.importFromCSV(filename.toStdString())) {
             refreshTable();
             statusBar()->showMessage("Данные импортированы из: " + filename);
         } else {
@@ -318,12 +340,12 @@ void MainWindow::setupTableSignals() {
 }
 
 void MainWindow::onEditStudent(int row, int column) {
-    if (row < 0 || row >= table->rowCount()) return;
+    if(row < 0 || row >= table->rowCount()) return;
 
     int id = table->item(row, 0)->text().toInt();
 
     Student* student = controller.findStudent(id);
-    if (!student) return;
+    if(!student) return;
 
     AddStudentDialog dialog(this);
     dialog.setId(student->getId());
@@ -331,7 +353,7 @@ void MainWindow::onEditStudent(int row, int column) {
     dialog.setGroup(QString::fromStdString(student->getGroup()));
     dialog.setScore(student->getAvgScore());
     
-    if (dialog.exec() == QDialog::Accepted) {
+    if(dialog.exec() == QDialog::Accepted) {
         Student updatedStudent(
             dialog.getId(),
             dialog.getName().toStdString(),
@@ -339,7 +361,7 @@ void MainWindow::onEditStudent(int row, int column) {
             dialog.getScore()
         );
 
-        if (controller.updateStudent(id, updatedStudent)) {
+        if(controller.updateStudent(id, updatedStudent)) {
             refreshTable();
             statusBar()->showMessage("Данные студента обновлены!");
         } else {
@@ -351,8 +373,8 @@ void MainWindow::onEditStudent(int row, int column) {
 void MainWindow::onBackupCreate() {
     QString dir = QFileDialog::getExistingDirectory(this, "Выберите папку для backup", "");
     
-    if (!dir.isEmpty()) {
-        if (controller.createBackup(dir.toStdString())) {
+    if(!dir.isEmpty()) {
+        if(controller.createBackup(dir.toStdString())) {
             statusBar()->showMessage("Backup создан в: " + dir);
         } else {
             QMessageBox::warning(this, "Ошибка", "Не удалось создать backup!");
@@ -364,13 +386,13 @@ void MainWindow::onBackupRestore() {
     QString filename = QFileDialog::getOpenFileName(this, "Выберите backup файл", 
         "", "Backup Files (*.dat);;All Files (*)");
     
-    if (!filename.isEmpty()) {
+    if(!filename.isEmpty()) {
         QMessageBox::StandardButton reply = QMessageBox::question(this, "Восстановление", 
             "Восстановить данные из backup? Текущие данные будут потеряны!",
             QMessageBox::Yes | QMessageBox::No);
         
-        if (reply == QMessageBox::Yes) {
-            if (controller.restoreFromBackup(filename.toStdString())) {
+        if(reply == QMessageBox::Yes) {
+            if(controller.restoreFromBackup(filename.toStdString())) {
                 refreshTable();
                 statusBar()->showMessage("Данные восстановлены из backup");
             } else {
@@ -388,7 +410,7 @@ void MainWindow::showStatistics() {
     message += QString("Общий средний балл: %1\n\n").arg(stats.overallAvgScore, 0, 'f', 2);
     
     message += "По группам:\n";
-    for (const auto& [group, avgScore] : stats.avgScoreByGroup) {
+    for(const auto& [group, avgScore] : stats.avgScoreByGroup) {
         message += QString("  %1: %2 (студентов: %3)\n")
             .arg(QString::fromStdString(group))
             .arg(avgScore, 0, 'f', 2)
@@ -396,4 +418,91 @@ void MainWindow::showStatistics() {
     }
     
     QMessageBox::information(this, "Статистика", message);
+}
+
+// DARK THEME...
+void MainWindow::applyDarkTheme() {
+    QPalette darkPalette;
+    
+    darkPalette.setColor(QPalette::Window, QColor(53, 53, 53));
+    darkPalette.setColor(QPalette::WindowText, Qt::white);
+    darkPalette.setColor(QPalette::Base, QColor(25, 25, 25));
+    darkPalette.setColor(QPalette::AlternateBase, QColor(53, 53, 53));
+    darkPalette.setColor(QPalette::ToolTipBase, Qt::white);
+    darkPalette.setColor(QPalette::ToolTipText, Qt::white);
+    darkPalette.setColor(QPalette::Text, Qt::white);
+    darkPalette.setColor(QPalette::Button, QColor(53, 53, 53));
+    darkPalette.setColor(QPalette::ButtonText, Qt::white);
+    darkPalette.setColor(QPalette::BrightText, Qt::red);
+    darkPalette.setColor(QPalette::Link, QColor(42, 130, 218));
+    darkPalette.setColor(QPalette::Highlight, QColor(42, 130, 218));
+    darkPalette.setColor(QPalette::HighlightedText, Qt::black);
+    
+    qApp->setPalette(darkPalette);
+}
+
+void MainWindow::applyLightTheme() {
+    qApp->setPalette(qApp->style()->standardPalette());
+}
+
+// Sort
+void MainWindow::setupSortingUI() {
+    QHBoxLayout* sortLayout = new QHBoxLayout();
+    
+    sortLayout->addWidget(new QLabel("Сортировка:", this));
+    
+    sortFieldCombo = new QComboBox(this);
+    sortFieldCombo->addItem("ID");
+    sortFieldCombo->addItem("Имя");
+    sortFieldCombo->addItem("Группа");
+    sortFieldCombo->addItem("Балл");
+    sortFieldCombo->addItem("Дата");
+    sortLayout->addWidget(sortFieldCombo);
+    
+    sortOrderCombo = new QComboBox(this);
+    sortOrderCombo->addItem("По возрастанию");
+    sortOrderCombo->addItem("По убыванию");
+    sortLayout->addWidget(sortOrderCombo);
+    
+    sortButton = new QPushButton("Сортировать", this);
+    sortLayout->addWidget(sortButton);
+    sortLayout->addStretch();
+    
+    QVBoxLayout* mainLayout = qobject_cast<QVBoxLayout*>(centralWidget()->layout());
+    if(mainLayout) {
+        mainLayout->insertLayout(2, sortLayout);
+    }
+    
+    connect(sortButton, &QPushButton::clicked, this, &MainWindow::onSortTable);
+}
+
+void MainWindow::onSortTable() {
+    QString fieldText = sortFieldCombo->currentText();
+    Database::SortField field;
+    
+    if (fieldText == "ID") field = Database::SortField::ID;
+    else if (fieldText == "Имя") field = Database::SortField::NAME;
+    else if (fieldText == "Группа") field = Database::SortField::GROUP;
+    else if (fieldText == "Балл") field = Database::SortField::SCORE;
+    else field = Database::SortField::DATE;
+    
+    Database::SortOrder order = (sortOrderCombo->currentText() == "По возрастанию") ? Database::SortOrder::ASC : Database::SortOrder::DESC; auto sortedStudents = controller.getSortedStudents(field, order);
+    
+    table->setRowCount(0);
+    
+    int row = 0;
+    for(const Student* student : sortedStudents) {
+        table->insertRow(row);
+        table->setItem(row, 0, new QTableWidgetItem(QString::number(student->getId())));
+        table->setItem(row, 1, new QTableWidgetItem(QString::fromStdString(student->getName())));
+        table->setItem(row, 2, new QTableWidgetItem(QString::fromStdString(student->getGroup())));
+        table->setItem(row, 3, new QTableWidgetItem(QString::number(student->getAvgScore())));
+        
+        auto time = std::chrono::system_clock::to_time_t(student->getAdmissionDate());
+        table->setItem(row, 4, new QTableWidgetItem(QString::fromStdString(std::ctime(&time))));
+        
+        row++;
+    }
+    
+    statusBar()->showMessage(QString("Отсортировано по: %1 (%2)").arg(fieldText).arg(sortOrderCombo->currentText()));
 }
